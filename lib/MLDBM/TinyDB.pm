@@ -1,13 +1,13 @@
 package MLDBM::TinyDB;
 
 use vars qw/$VERSION @ISA @EXPORT_OK/;
-$VERSION = '0.16';# 
+$VERSION = '0.17';# 
 
 use strict;
 use Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(db add_common);
-use MLDBM qw/SDBM_File Storable/; 
+use MLDBM qw/SDBM_File Storable/;## change SDBM_File for any other DBM file if you want 
 use MLDBM::Serializer::Storable; ## p2x
 use Storable qw/dclone/;
 use SDBM_File; ## p2x
@@ -27,6 +27,12 @@ sub db {
 	} else {
 		return undef;#
 	} 
+}
+
+##	UNDOCUMENTED
+sub free_dbh {
+	my $self = shift;
+	return (%db = ());
 }
 
 sub init {
@@ -111,6 +117,28 @@ sub add_common {
 	}
 }
 
+sub search {
+	my ($self, $criteria, $limit) = @_;
+	my @found = ();
+	my @spec = $self->{NUMKEYS}->Keys;
+	my $str = join("|",@{$self->{FLDS}});
+	$str = '$criteria =~ s/(' .  $str . ')/\'$hash{\' . $1 . \'}\'/ge';
+	unless (eval $str) {
+		warn "eval failed: $@" if $@;
+	}
+	my %hash = (); ##-
+	for(my $i=0; $i<=$#spec; $i++) {
+		@hash{ @{$self->{FLDS}} } = @{ ${$self->{TIEHASH}}{$spec[$i]} };
+		if (eval $criteria) {
+			push(@found, $i);
+			last if $limit && ($limit == @found);
+		} elsif ($@) {
+			warn "eval failed:$@";
+		}
+	}
+	return @found;
+}
+
 sub _get_recs {
 ## 	ext:true - get external values, false - don't
 	my ($self, $ext, @list) = @_;
@@ -131,6 +159,7 @@ sub _get_recs {
 			unless defined $db{$self->{UP}};
 	}
 
+	my @down = @{$self->{DOWN}};#0.17
 	for(my $i=0; $i<=$#spec; $i++) {
 		if (defined $spec[$i]) {
 			my $href = {}; ##-
@@ -147,7 +176,7 @@ sub _get_recs {
 					die "hash element \"nodes\" exists and isn't empty while superior table object doesn't exist";
 				}
 			} ##+ 0.09
-			foreach my $e (@{$self->{DOWN}}) {
+			foreach my $e (@down) {#0.17
 				my @temp = unpack "n*", $href->{$e};
 				shift @temp;
 				$href->{$e} = [@temp];
@@ -514,6 +543,8 @@ MLDBM::TinyDB - create and mainpulate structured MLDBM tied hash references
 	$aref_of_href1 = $obj{TABLE}->get_recs; ## NOT THE SAME AS ABOVE
 	## or
 	($aref_of_href1, @get_recs_indices1) =  $obj{TABLE}->get_recs;
+
+	@indices_of_recs_found = $obj{TABLE}->search($criteria, [$limit]);
 	
 	$obj{TABLEn}->delete([LIST]); 
 	$obj{TABLEn}->last;
@@ -546,9 +577,11 @@ records. Those fields MUST be set to proper values before write records C<set_re
 
 =item MLDBM::TinyDB::add_common
 
+=item add_common
+
 Utility sub - allow to arbitrary fields names set (except C<nodes>) i.e. 
 C<created, updated, blahblah> to be added just after first element (name of table) to all 
-(sub-)arrays pointed by C<$tree> data structure. 
+(sub-)arrays pointed by C<$tree> data structure. It's not exported by deafult. 
 
 =back
  
@@ -565,9 +598,11 @@ if you specify them. Afterwards C<init> read these structures and builds object 
 
 =item MLDBM::TinyDB::db
 
+=item db
+
 Returns object reference of interior TABLE. If underlying database structure
 doesn't exist on disk then it's created. Returns C<undef> on failure. Must be invoked 
-after C<init>. 
+after C<init>. It's not exported by default. 
 
 =back
 
@@ -620,6 +655,16 @@ returns array reference to hash references plus got records indices list. If any
 record field name is the same as interior table then corresponding hash value will contain 
 array reference - the array will contain external records indices.
 
+=item search
+
+Searches records in table in order to find ones that match supplied criteria.
+The criteria is string which may contain something i.e. 
+C<field_name  > 1000 && (field_name1 =~ /PATTERN/ || field_name2 lt $string)> or i.e.
+C<defined(field_name)> meaning you can construct criteria string similar to
+perl expressions. IMPORTANT: The use of fields names that are interior tables names  
+(SEE: C<down> method) will take no effect. Second (optional) argument is $limit, 
+which defines what number of records matching the criteria should be at most returned.
+
 =item delete
 
 Deletes records of specified indices or all records if no arguments. If for record to
@@ -651,7 +696,7 @@ Sets/gets name of object.
 	@common = qw/created updated/; ## option
 
 	$tree = [qw/table1 field1/,
-			[qw/table2 field2/,[qw/table3 field3/]]
+			[qw/table2 field2/,[qw/table3 field31 field32/]]
 		]; 
 
 	add_common($tree,\@common); ## option
@@ -661,9 +706,12 @@ Sets/gets name of object.
 	$obj{table2} = db("table2");
 	$obj{table3} = db("table3");
 
-	foreach (qw/33331 33332 33333/) {
+	@x = qw/green blue yellow black red/;
+	@y = (1, undef, 3, 5, 2);
+	for(my $i = 0; $i<@x; $i++) {
 		my $href;
-		$href->{field3} = $_;
+		$href->{field31} = $x[$i];
+		$href->{field32} = $y[$i];
 		push(@$aref, $href);
 	}
 
@@ -672,6 +720,9 @@ Sets/gets name of object.
 
 	@set = $obj{table3}->set_recs($aref); ## append three records 
 	print "@set\n";
+
+	@found = $obj{table3}->search('length(field31)>4||!defined(field32)', 3);
+	print "@found\n";# 0 1 2
 
 	$href->{table3} = [@set]; ## store indices of those records
 	$href->{field2} = "22222";
@@ -712,7 +763,7 @@ Please feel free to e-mail me if it concerns this module.
 
 =head1 VERSION
 
-Version 0.16   04 NOV 2002
+Version 0.17   09 NOV 2002
 
 =head1 SEE ALSO
 

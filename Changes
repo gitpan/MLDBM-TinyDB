@@ -1,4 +1,6 @@
-Revision history for Perl extension MLDBM-TinyDB-0.16.
+Revision history for Perl extension MLDBM-TinyDB-0.17.
 
 0.16 	use of Exporter module to export 'db' and 'add_common' subs
 	on request
+0.17	'search' method added, 'get_recs' a little bit performance improvment,
+	test subs added
