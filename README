@@ -1,4 +1,4 @@
-MLDBM::TinyDB version 0.17
+MLDBM::TinyDB version 0.19
 ==============================
 More-than-flatfile-database 
 - it's designed as local database to manage rather small amount of data

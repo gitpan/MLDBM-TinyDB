@@ -1,7 +1,7 @@
 package MLDBM::TinyDB;
 
 use vars qw/$VERSION @ISA @EXPORT_OK/;
-$VERSION = '0.18';# 
+$VERSION = '0.19';# 
 
 use strict;
 use Exporter;
@@ -115,6 +115,29 @@ sub add_common {
 			add_common($_, $common);		
 		}
 	}
+}
+
+sub lsearch {
+	my ($self, $criteria, $limit) = @_;
+	use locale;## just that line added to sort method
+	my @found = ();
+	my @spec = $self->{NUMKEYS}->Keys;
+	my $str = join "|", @{$self->{FLDS}};
+	$str = '$criteria =~ s/(' .  $str . ')/\'$hash{\' . $1 . \'}\'/ge';
+	unless (eval $str) {
+		warn "eval failed: $@" if $@;
+	}
+	my %hash = (); ##-
+	for(my $i=0; $i<=$#spec; $i++) {
+		@hash{ @{$self->{FLDS}} } = @{ ${$self->{TIEHASH}}{$spec[$i]} };
+		if (eval $criteria) {
+			push(@found, $i);
+			last if $limit && ($limit == @found);
+		} elsif ($@) {
+			warn "eval failed:$@";
+		}
+	}
+	return @found;
 }
 
 sub search {
@@ -742,6 +765,7 @@ MLDBM::TinyDB - create and mainpulate structured MLDBM tied hash references
 	($aref_of_href1, @get_recs_indices1) =  $obj{TABLE}->get_recs;
 
 	@indices_of_recs_found = $obj{TABLE}->search($criteria, [$limit]);
+	@indices_of_recs_found = $obj{TABLE}->lsearch($criteria, [$limit]);
 	
 	@indices_and_sort_field_values = $obj{TABLE}->sort($sort_formula_string);
 	@indices_and_sort_field_values = $obj{TABLE}->lsort($sort_formula_string);
@@ -857,13 +881,17 @@ array reference - the array will contain external records indices.
 
 =item search
 
+=item lsearch
+
 Searches records in table in order to find ones that match supplied criteria,
-returns array of indices of those records. The criteria is string which may contain something i.e. 
+returns array of indices of those records. The criteria is a string which may contain something like i.e. 
 C<< field_name  > 1000 && (field_name1 =~ /PATTERN/ || field_name2 lt $string) >> or i.e.
 C<defined(field_name)> meaning you can construct criteria string similar to
 perl expressions. IMPORTANT: The use of fields names that are interior tables names  
 (SEE: C<down> method) will take no effect. Second (optional) argument is $limit, 
 which defines what number of record indices matching the criteria should be at most returned.
+C<lsearch> differs from C<search> method in one way - it uses C<locale> pragma -
+it uses system locale settings in string comparison/matching operations.
 
 =item sort 
 
@@ -877,7 +905,7 @@ i.e. C<< a(field_name) <=> b(field_name) >> - in this case C<field_name> value w
 second element of each pointed array C<< a(field_name1) cmp b(field_name1)||length a(field_test2) <=> length b(field_test2) >>
 - in this case C<field_name1> and C<field_name2> value will be second and third
 element of each pointed array. If empty array is returned then something went wrong.
-C<lsort> differs from C<sort> method in one way - it uses C<locale> pragma and it sorts
+C<lsort> differs from C<sort> method in one way - it uses C<locale> pragma - it sorts
 lexically in system locale sorting order.
 
 =item delete
@@ -983,7 +1011,7 @@ Please feel free to e-mail me if it concerns this module.
 
 =head1 VERSION
 
-Version 0.18   24 NOV 2002
+Version 0.19   25 NOV 2002
 
 =head1 SEE ALSO
 
