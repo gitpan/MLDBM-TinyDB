@@ -1,7 +1,7 @@
 package MLDBM::TinyDB;
 
 use vars qw/$VERSION @ISA @EXPORT_OK/;
-$VERSION = '0.19';# 
+$VERSION = '0.20';# 
 
 use strict;
 use Exporter;
@@ -219,10 +219,10 @@ sub lsort {
 
 		@sorted = sort {$a->[1] <=> $b->[1]||
 				$a->[2] cmp $b->[2]} @sorted 
-			if $reg[0]->[5] == 2 && $reg[1]->[5] == 0;
+			if $reg[0]->[5] == 1 && $reg[1]->[5] == 0;
 		@sorted = sort {$a->[1] <=> $b->[1]||
 				$b->[2] cmp $a->[2]} @sorted 
-			if $reg[0]->[5] == 2 && $reg[1]->[5] == 2;
+			if $reg[0]->[5] == 1 && $reg[1]->[5] == 2;
 		@sorted = sort {$a->[1] <=> $b->[1]||
 				$a->[2] <=> $b->[2]} @sorted 
 			if $reg[0]->[5] == 1 && $reg[1]->[5] == 1;
@@ -232,13 +232,13 @@ sub lsort {
 
 		@sorted = sort {$b->[1] <=> $a->[1]||
 				$a->[2] cmp $b->[2]} @sorted 
-			if $reg[0]->[5] == 2 && $reg[1]->[5] == 0;
+			if $reg[0]->[5] == 3 && $reg[1]->[5] == 0;
 		@sorted = sort {$b->[1] <=> $a->[1]||
 				$b->[2] cmp $a->[2]} @sorted 
-			if $reg[0]->[5] == 2 && $reg[1]->[5] == 2;
+			if $reg[0]->[5] == 3 && $reg[1]->[5] == 2;
 		@sorted = sort {$b->[1] <=> $a->[1]||
 				$a->[2] <=> $b->[2]} @sorted 
-			if $reg[0]->[5] == 1 && $reg[1]->[5] == 1;
+			if $reg[0]->[5] == 3 && $reg[1]->[5] == 1;
 		@sorted = sort {$b->[1] <=> $a->[1]||
 				$b->[2] <=> $a->[2]} @sorted 
 			if $reg[0]->[5] == 3 && $reg[1]->[5] == 3;
@@ -317,10 +317,10 @@ sub sort {
 
 		@sorted = sort {$a->[1] <=> $b->[1]||
 				$a->[2] cmp $b->[2]} @sorted 
-			if $reg[0]->[5] == 2 && $reg[1]->[5] == 0;
+			if $reg[0]->[5] == 1 && $reg[1]->[5] == 0;
 		@sorted = sort {$a->[1] <=> $b->[1]||
 				$b->[2] cmp $a->[2]} @sorted 
-			if $reg[0]->[5] == 2 && $reg[1]->[5] == 2;
+			if $reg[0]->[5] == 1 && $reg[1]->[5] == 2;
 		@sorted = sort {$a->[1] <=> $b->[1]||
 				$a->[2] <=> $b->[2]} @sorted 
 			if $reg[0]->[5] == 1 && $reg[1]->[5] == 1;
@@ -330,13 +330,13 @@ sub sort {
 
 		@sorted = sort {$b->[1] <=> $a->[1]||
 				$a->[2] cmp $b->[2]} @sorted 
-			if $reg[0]->[5] == 2 && $reg[1]->[5] == 0;
+			if $reg[0]->[5] == 3 && $reg[1]->[5] == 0;
 		@sorted = sort {$b->[1] <=> $a->[1]||
 				$b->[2] cmp $a->[2]} @sorted 
-			if $reg[0]->[5] == 2 && $reg[1]->[5] == 2;
+			if $reg[0]->[5] == 3 && $reg[1]->[5] == 2;
 		@sorted = sort {$b->[1] <=> $a->[1]||
 				$a->[2] <=> $b->[2]} @sorted 
-			if $reg[0]->[5] == 1 && $reg[1]->[5] == 1;
+			if $reg[0]->[5] == 3 && $reg[1]->[5] == 1;
 		@sorted = sort {$b->[1] <=> $a->[1]||
 				$b->[2] <=> $a->[2]} @sorted 
 			if $reg[0]->[5] == 3 && $reg[1]->[5] == 3;
@@ -837,7 +837,7 @@ C<MLDBM::TinyDB::db> CONSTRUCTORS
 
 =item flds
 
-Returns array of all field's names of record on which operate object.
+Returns array of all fields names of record on which operate object.
 
 =item last
 
@@ -1011,7 +1011,7 @@ Please feel free to e-mail me if it concerns this module.
 
 =head1 VERSION
 
-Version 0.19   25 NOV 2002
+Version 0.20  27 NOV 2002
 
 =head1 SEE ALSO
 
