@@ -1,6 +1,4 @@
-Revision history for Perl extension MLDBM-TinyDB-0.15.
+Revision history for Perl extension MLDBM-TinyDB-0.16.
 
-0.01  Fri Nov  1 11:25:07 2002
-	- original version; created by h2xs 1.21 with options
-		-X -n MLDBM-TinyDB-0.15
-
+0.16 	use of Exporter module to export 'db' and 'add_common' subs
+	on request

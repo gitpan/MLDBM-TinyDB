@@ -7,7 +7,7 @@
 
 use Test;
 BEGIN { plan tests => 1 };
-use MLDBM-TinyDB-0.15;
+use MLDBM::TinyDB;
 ok(1); # If we made it this far, we're ok.
 
 #########################

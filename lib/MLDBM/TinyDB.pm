@@ -1,9 +1,7 @@
-#====================#
 package MLDBM::TinyDB;
-#====================#
 
 use vars qw/$VERSION @ISA @EXPORT_OK/;
-$VERSION = '0.15';# 
+$VERSION = '0.16';# 
 
 use strict;
 use Exporter;
@@ -465,6 +463,8 @@ MLDBM::TinyDB - create and mainpulate structured MLDBM tied hash references
 =head1 SYNOPSIS
 
 	use MLDBM::TinyDB;
+	## or
+	use MLDBM::TinyDB qw/db add_common/;
 
 	@common = qw/created updated/; ## optional
 
@@ -477,6 +477,8 @@ MLDBM::TinyDB - create and mainpulate structured MLDBM tied hash references
 		]; 
 
 	MLDBM::TinyDB::add_common($tree,\@common); ## optional
+	## or
+	add_common($tree,\@common);
 
 	%obj = ();
 	$obj{TABLE} = MLDBM::TinyDB->init(TABLE, $tree);
@@ -486,15 +488,19 @@ MLDBM::TinyDB - create and mainpulate structured MLDBM tied hash references
 	## or 
 	$obj{TABLE} = MLDBM::TinyDB->init(TABLE); ## NEVER FIRST TIME
 
-	@down = $obj{TABLE}->down; ## (TABLE1)
+	@down = $obj{TABLE}->down; ## TABLE1
 
 	$obj{TABLE1} = MLDBM::TinyDB::db(TABLE1);
+	## or
+	$obj{TABLE1} = db(TABLE1);
 
 	$table = $obj{TABLE}->table; ## TABLE
 
-	@down = $obj{TABLE1}->down; ## (TABLE2)
+	@down = $obj{TABLE1}->down; ## TABLE2
 
 	$obj{TABLE2} = MLDBM::TinyDB::db(TABLE2);
+	## or
+	$obj{TABLE2} = db(TABLE2);
 
 	@set_recs_indices = 
 		$obj{TABLEn}->set_recs(ARRAYREF_TO_HASHREF,[LIST]);
@@ -640,7 +646,7 @@ Sets/gets name of object.
 
 =head1 EXAMPLE2
 
-	use MLDBM::TinyDB;
+	use MLDBM::TinyDB qw/db add_common/;
 
 	@common = qw/created updated/; ## option
 
@@ -648,12 +654,12 @@ Sets/gets name of object.
 			[qw/table2 field2/,[qw/table3 field3/]]
 		]; 
 
-	MLDBM::TinyDB::add_common($tree,\@common); ## option
+	add_common($tree,\@common); ## option
 
 	%obj = ();
 	$obj{table1} = MLDBM::TinyDB->init("table1", $tree);
-	$obj{table2} = MLDBM::TinyDB::db("table2");
-	$obj{table3} = MLDBM::TinyDB::db("table3");
+	$obj{table2} = db("table2");
+	$obj{table3} = db("table3");
 
 	foreach (qw/33331 33332 33333/) {
 		my $href;
@@ -706,7 +712,7 @@ Please feel free to e-mail me if it concerns this module.
 
 =head1 VERSION
 
-Version 0.15   22 OCT 2002
+Version 0.16   04 NOV 2002
 
 =head1 SEE ALSO
 

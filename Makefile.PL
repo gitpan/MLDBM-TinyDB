@@ -6,5 +6,4 @@ WriteMakefile(
     'VERSION_FROM'	=> 'lib/MLDBM/TinyDB.pm', # finds $VERSION
     SKIP => [qw(static dynamic)],
     'linkext' => {LINKTYPE => '' },
-    'dist' => {COMPRESS=>'gzip -9f', SUFFIX => 'gz'}
 );
