@@ -1,7 +1,7 @@
 package MLDBM::TinyDB;
 
 use vars qw/$VERSION @ISA @EXPORT_OK/;
-$VERSION = '0.17';# 
+$VERSION = '0.18';# 
 
 use strict;
 use Exporter;
@@ -121,7 +121,7 @@ sub search {
 	my ($self, $criteria, $limit) = @_;
 	my @found = ();
 	my @spec = $self->{NUMKEYS}->Keys;
-	my $str = join("|",@{$self->{FLDS}});
+	my $str = join "|", @{$self->{FLDS}};
 	$str = '$criteria =~ s/(' .  $str . ')/\'$hash{\' . $1 . \'}\'/ge';
 	unless (eval $str) {
 		warn "eval failed: $@" if $@;
@@ -137,6 +137,203 @@ sub search {
 		}
 	}
 	return @found;
+}
+
+sub lsort {
+	my ($self, $sform) = @_;
+	use locale;## just that line added to sort method
+	my $str;
+	my @spec = $self->{NUMKEYS}->Keys;
+	my $not = join "|", @{$self->{DOWN}}, 'nodes';
+	my @allowed = grep !/^$not$/, @{$self->{FLDS}};
+	my $allowed = join "|", @allowed;
+	my @reg = ();
+	my @sorted = ();
+	my %conv = ('ab'=>0, 'ba'=>1, 'cmp'=>0, '<=>'=>1);
+	$str = 'while ($sform =~ s/^(\w*)\s*(\(?)\s*([ab])\s*\(\s*('.$allowed.')\s*\)\s*(\)?)\s*(cmp|\<\=\>)\s*(\1)\s*(\2)\s*([ab])\s*\(\s*(\4)\s*\)\s*(\5)\s*(?:\|\|)?//){ push(@reg,[$1, $3, $4, $6, $9, ($conv{qq/$3$9/}<<1)|$conv{$6}]) if ($3 ne $9) && !$conv{$4}++; }';
+	eval $str;
+	die "eval failed: $@" if $@;
+	if (@reg == 0) { 
+		return @sorted;
+	}
+	my @keys = map { $_->[2] } @reg;
+	my @indices = k2i($self->{FLDS},[@keys]);
+	my @ex = grep $_->[0], @reg;
+	for(my $i=0; $i<=$#spec; $i++) {
+		 push(@sorted, [$i, @{ ${$self->{TIEHASH}}{$spec[$i]} }[@indices]]);
+	}
+	if (@ex == 0 && @keys == 1) {
+		@sorted = sort {$a->[1] cmp $b->[1]} @sorted if $reg[0]->[5] == 0; 
+		@sorted = sort {$b->[1] cmp $a->[1]} @sorted if $reg[0]->[5] == 2; 
+		@sorted = sort {$a->[1] <=> $b->[1]} @sorted if $reg[0]->[5] == 1; 
+		@sorted = sort {$b->[1] <=> $a->[1]} @sorted if $reg[0]->[5] == 3; 
+	} elsif (@ex == 0 && @keys == 2) {
+		@sorted = sort {$a->[1] cmp $b->[1]||
+				$a->[2] cmp $b->[2]} @sorted 
+			if $reg[0]->[5] == 0 && $reg[1]->[5] == 0;
+		@sorted = sort {$a->[1] cmp $b->[1]||
+				$b->[2] cmp $a->[2]} @sorted
+			if $reg[0]->[5] == 0 && $reg[1]->[5] == 2;
+		@sorted = sort {$a->[1] cmp $b->[1]||
+				$a->[2] <=> $b->[2]} @sorted
+			if $reg[0]->[5] == 0 && $reg[1]->[5] == 1;
+		@sorted = sort {$a->[1] cmp $b->[1]||
+				$b->[2] <=> $a->[2]} @sorted
+			if $reg[0]->[5] == 0 && $reg[1]->[5] == 3;
+	
+		@sorted = sort {$b->[1] cmp $a->[1]||
+				$a->[2] cmp $b->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 0;
+		@sorted = sort {$b->[1] cmp $a->[1]||
+				$b->[2] cmp $a->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 2;
+		@sorted = sort {$b->[1] cmp $a->[1]||
+				$a->[2] <=> $b->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 1;
+		@sorted = sort {$b->[1] cmp $a->[1]||
+				$b->[2] <=> $a->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 3;
+
+		@sorted = sort {$a->[1] <=> $b->[1]||
+				$a->[2] cmp $b->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 0;
+		@sorted = sort {$a->[1] <=> $b->[1]||
+				$b->[2] cmp $a->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 2;
+		@sorted = sort {$a->[1] <=> $b->[1]||
+				$a->[2] <=> $b->[2]} @sorted 
+			if $reg[0]->[5] == 1 && $reg[1]->[5] == 1;
+		@sorted = sort {$a->[1] <=> $b->[1]||
+				$b->[2] <=> $a->[2]} @sorted 
+			if $reg[0]->[5] == 1 && $reg[1]->[5] == 3;
+
+		@sorted = sort {$b->[1] <=> $a->[1]||
+				$a->[2] cmp $b->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 0;
+		@sorted = sort {$b->[1] <=> $a->[1]||
+				$b->[2] cmp $a->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 2;
+		@sorted = sort {$b->[1] <=> $a->[1]||
+				$a->[2] <=> $b->[2]} @sorted 
+			if $reg[0]->[5] == 1 && $reg[1]->[5] == 1;
+		@sorted = sort {$b->[1] <=> $a->[1]||
+				$b->[2] <=> $a->[2]} @sorted 
+			if $reg[0]->[5] == 3 && $reg[1]->[5] == 3;
+	} else {
+		undef $sform;
+		my $i = 1;
+		foreach my $e (@reg) {
+			$sform .= $e->[0] if $e->[0];
+			$sform .= '$'.$e->[1].'->['.$i.']'.$e->[3];
+			$sform .= " $e->[0] " if $e->[0];
+			$sform .= '$'.$e->[4].'->['.$i.']';
+			$sform .= '||';	
+			$i++;
+		}
+		chop $sform;
+		chop $sform;
+		#print "\$sform:$sform";
+		@sorted = sort { eval $sform }  @sorted;
+	}
+	return @sorted;
+}
+
+sub sort {
+	my ($self, $sform) = @_;
+	my $str;
+	my @spec = $self->{NUMKEYS}->Keys;
+	my $not = join "|", @{$self->{DOWN}}, 'nodes';
+	my @allowed = grep !/^$not$/, @{$self->{FLDS}};
+	my $allowed = join "|", @allowed;
+	my @reg = ();
+	my @sorted = ();
+	my %conv = ('ab'=>0, 'ba'=>1, 'cmp'=>0, '<=>'=>1);
+	$str = 'while ($sform =~ s/^(\w*)\s*(\(?)\s*([ab])\s*\(\s*('.$allowed.')\s*\)\s*(\)?)\s*(cmp|\<\=\>)\s*(\1)\s*(\2)\s*([ab])\s*\(\s*(\4)\s*\)\s*(\5)\s*(?:\|\|)?//){ push(@reg,[$1, $3, $4, $6, $9, ($conv{qq/$3$9/}<<1)|$conv{$6}]) if ($3 ne $9) && !$conv{$4}++; }';
+	eval $str;
+	die "eval failed: $@" if $@;
+	if (@reg == 0) { 
+		return @sorted;
+	}
+	my @keys = map { $_->[2] } @reg;
+	my @indices = k2i($self->{FLDS},[@keys]);
+	my @ex = grep $_->[0], @reg;
+	for(my $i=0; $i<=$#spec; $i++) {
+		 push(@sorted, [$i, @{ ${$self->{TIEHASH}}{$spec[$i]} }[@indices]]);
+	}
+	if (@ex == 0 && @keys == 1) {
+		@sorted = sort {$a->[1] cmp $b->[1]} @sorted if $reg[0]->[5] == 0; 
+		@sorted = sort {$b->[1] cmp $a->[1]} @sorted if $reg[0]->[5] == 2; 
+		@sorted = sort {$a->[1] <=> $b->[1]} @sorted if $reg[0]->[5] == 1; 
+		@sorted = sort {$b->[1] <=> $a->[1]} @sorted if $reg[0]->[5] == 3; 
+	} elsif (@ex == 0 && @keys == 2) {
+		@sorted = sort {$a->[1] cmp $b->[1]||
+				$a->[2] cmp $b->[2]} @sorted 
+			if $reg[0]->[5] == 0 && $reg[1]->[5] == 0;
+		@sorted = sort {$a->[1] cmp $b->[1]||
+				$b->[2] cmp $a->[2]} @sorted
+			if $reg[0]->[5] == 0 && $reg[1]->[5] == 2;
+		@sorted = sort {$a->[1] cmp $b->[1]||
+				$a->[2] <=> $b->[2]} @sorted
+			if $reg[0]->[5] == 0 && $reg[1]->[5] == 1;
+		@sorted = sort {$a->[1] cmp $b->[1]||
+				$b->[2] <=> $a->[2]} @sorted
+			if $reg[0]->[5] == 0 && $reg[1]->[5] == 3;
+	
+		@sorted = sort {$b->[1] cmp $a->[1]||
+				$a->[2] cmp $b->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 0;
+		@sorted = sort {$b->[1] cmp $a->[1]||
+				$b->[2] cmp $a->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 2;
+		@sorted = sort {$b->[1] cmp $a->[1]||
+				$a->[2] <=> $b->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 1;
+		@sorted = sort {$b->[1] cmp $a->[1]||
+				$b->[2] <=> $a->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 3;
+
+		@sorted = sort {$a->[1] <=> $b->[1]||
+				$a->[2] cmp $b->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 0;
+		@sorted = sort {$a->[1] <=> $b->[1]||
+				$b->[2] cmp $a->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 2;
+		@sorted = sort {$a->[1] <=> $b->[1]||
+				$a->[2] <=> $b->[2]} @sorted 
+			if $reg[0]->[5] == 1 && $reg[1]->[5] == 1;
+		@sorted = sort {$a->[1] <=> $b->[1]||
+				$b->[2] <=> $a->[2]} @sorted 
+			if $reg[0]->[5] == 1 && $reg[1]->[5] == 3;
+
+		@sorted = sort {$b->[1] <=> $a->[1]||
+				$a->[2] cmp $b->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 0;
+		@sorted = sort {$b->[1] <=> $a->[1]||
+				$b->[2] cmp $a->[2]} @sorted 
+			if $reg[0]->[5] == 2 && $reg[1]->[5] == 2;
+		@sorted = sort {$b->[1] <=> $a->[1]||
+				$a->[2] <=> $b->[2]} @sorted 
+			if $reg[0]->[5] == 1 && $reg[1]->[5] == 1;
+		@sorted = sort {$b->[1] <=> $a->[1]||
+				$b->[2] <=> $a->[2]} @sorted 
+			if $reg[0]->[5] == 3 && $reg[1]->[5] == 3;
+	} else {
+		undef $sform;
+		my $i = 1;
+		foreach my $e (@reg) {
+			$sform .= $e->[0] if $e->[0];
+			$sform .= '$'.$e->[1].'->['.$i.']'.$e->[3];
+			$sform .= " $e->[0] " if $e->[0];
+			$sform .= '$'.$e->[4].'->['.$i.']';
+			$sform .= '||';	
+			$i++;
+		}
+		chop $sform;
+		chop $sform;
+		#print "\$sform:$sform";
+		@sorted = sort { eval $sform }  @sorted;
+	}
+	return @sorted;
 }
 
 sub _get_recs {
@@ -546,6 +743,9 @@ MLDBM::TinyDB - create and mainpulate structured MLDBM tied hash references
 
 	@indices_of_recs_found = $obj{TABLE}->search($criteria, [$limit]);
 	
+	@indices_and_sort_field_values = $obj{TABLE}->sort($sort_formula_string);
+	@indices_and_sort_field_values = $obj{TABLE}->lsort($sort_formula_string);
+	
 	$obj{TABLEn}->delete([LIST]); 
 	$obj{TABLEn}->last;
 
@@ -561,7 +761,7 @@ it denotes interior (related) table where first scalar value is that table name
 and the next ones are fields names and so on... If database structure isn't written on disk 
 then that structure is fetched from the array reference and written to disk. 
 Object is always built from disk structures. To define record you may use any field 
-name except "nodes" which is restricted name field name and shouldn't be specified 
+name except "nodes" which is restricted field name and shouldn't be specified 
 explicitly. C<created> and C<updated> fields are handled 
 internally - if they are specified then: 1)on I<append record> operation C<time> 
 function value is set to C<created> record field 2)on I<write to existing record> 
@@ -657,13 +857,28 @@ array reference - the array will contain external records indices.
 
 =item search
 
-Searches records in table in order to find ones that match supplied criteria.
-The criteria is string which may contain something i.e. 
-C<field_name  > 1000 && (field_name1 =~ /PATTERN/ || field_name2 lt $string)> or i.e.
+Searches records in table in order to find ones that match supplied criteria,
+returns array of indices of those records. The criteria is string which may contain something i.e. 
+C<< field_name  > 1000 && (field_name1 =~ /PATTERN/ || field_name2 lt $string) >> or i.e.
 C<defined(field_name)> meaning you can construct criteria string similar to
 perl expressions. IMPORTANT: The use of fields names that are interior tables names  
 (SEE: C<down> method) will take no effect. Second (optional) argument is $limit, 
-which defines what number of records matching the criteria should be at most returned.
+which defines what number of record indices matching the criteria should be at most returned.
+
+=item sort 
+
+=item lsort
+
+Sort the all records of table associated with object according to C<$sort_formula_string> which
+must be specified. Returns array of array references, where each pointed array contains 
+as first element index of record followed by sorted fields values in order they appear in 
+C<$sort_formula_string>. Sort formula string is similar to perl sort function BLOCK 
+i.e. C<< a(field_name) <=> b(field_name) >> - in this case C<field_name> value will be 
+second element of each pointed array C<< a(field_name1) cmp b(field_name1)||length a(field_test2) <=> length b(field_test2) >>
+- in this case C<field_name1> and C<field_name2> value will be second and third
+element of each pointed array. If empty array is returned then something went wrong.
+C<lsort> differs from C<sort> method in one way - it uses C<locale> pragma and it sorts
+lexically in system locale sorting order.
 
 =item delete
 
@@ -721,6 +936,11 @@ Sets/gets name of object.
 	@set = $obj{table3}->set_recs($aref); ## append three records 
 	print "@set\n";
 
+	@indices_and_sort_field_values = $obj{table3}->sort('a(field31) cmp b(field31)');
+	foreach (@indices_and_sort_field_values) {
+		print "@$_\n";
+	}
+
 	@found = $obj{table3}->search('length(field31)>4||!defined(field32)', 3);
 	print "@found\n";# 0 1 2
 
@@ -763,7 +983,7 @@ Please feel free to e-mail me if it concerns this module.
 
 =head1 VERSION
 
-Version 0.17   09 NOV 2002
+Version 0.18   24 NOV 2002
 
 =head1 SEE ALSO
 
